@@ -1,3 +1,383 @@
+# Technical Report
+
+## ADS-B OpenWebRX Integration and Aircraft Data Synchronization
+
+**Date:** 6 September 2026
+**System:** OpenWebRX+ / Debian
+**Scope:** ADS-B backend processing and aircraft synchronization
+
+---
+
+## 1. Purpose
+
+The purpose of this work was to integrate ADS-B aircraft data into the OpenWebRX+ environment and troubleshoot the aircraft data path between `dump1090-fa`, the synchronization mechanism, and the OpenWebRX+ aircraft processing chain.
+
+The work was focused exclusively on the following components:
+
+```text
+/usr/lib/python3/dist-packages/owrx/aircraft/__init__.py
+/usr/lib/python3/dist-packages/owrx/__main__.py
+/usr/lib/python3/dist-packages/csdr/chain/aircraft.py
+/usr/local/bin/aircraft-sync.sh
+/etc/systemd/system/aircraft-sync.service
+```
+
+---
+
+# 2. ADS-B Data Source
+
+During the investigation, ADS-B Beast TCP sources were tested.
+
+The working ADS-B source was identified as:
+
+```text
+192.168.10.170:30005
+```
+
+Another source:
+
+```text
+192.168.10.213:30005
+```
+
+was tested but did not provide the required ADS-B Beast data.
+
+The installed ADS-B decoder/data source was identified as:
+
+```text
+/usr/bin/dump1090-fa
+```
+
+`dump1090-fa` provides the aircraft information that is subsequently synchronized and processed by OpenWebRX+.
+
+---
+
+# 3. Aircraft Synchronization Script
+
+The following script was created/modified:
+
+```text
+/usr/local/bin/aircraft-sync.sh
+```
+
+The script provides the synchronization layer between the ADS-B aircraft data source and the aircraft JSON location used during the OpenWebRX+ integration.
+
+The file timestamp confirms that it was created or modified on:
+
+**6 September 2026 – 13:51:51**
+
+The synchronization approach was introduced so that the aircraft data could be obtained independently and placed in the expected location for further processing.
+
+The general data flow is:
+
+```text
+ADS-B Receiver
+      │
+      ▼
+dump1090-fa
+      │
+      ▼
+Aircraft JSON
+      │
+      ▼
+aircraft-sync.sh
+      │
+      ▼
+OpenWebRX+ aircraft processing
+```
+
+---
+
+# 4. Systemd Synchronization Service
+
+A dedicated systemd service was created:
+
+```text
+/etc/systemd/system/aircraft-sync.service
+```
+
+Timestamp:
+
+**6 September 2026 – 13:52:18**
+
+The service provides automatic execution of:
+
+```text
+/usr/local/bin/aircraft-sync.sh
+```
+
+This removes the requirement for the synchronization script to be started manually and allows the ADS-B aircraft data synchronization to operate as a system service.
+
+The resulting structure is:
+
+```text
+aircraft-sync.service
+        │
+        ▼
+aircraft-sync.sh
+        │
+        ▼
+Aircraft JSON
+        │
+        ▼
+OpenWebRX+ ADS-B processing
+```
+
+---
+
+# 5. OpenWebRX+ Aircraft Module
+
+The OpenWebRX+ aircraft module was modified:
+
+```text
+/usr/lib/python3/dist-packages/owrx/aircraft/__init__.py
+```
+
+A backup was created before modification:
+
+```text
+/usr/lib/python3/dist-packages/owrx/aircraft/__init__.py.bak-adsb
+```
+
+The timestamps confirm the following sequence:
+
+```text
+14:09:28  backup created
+14:09:57  aircraft/__init__.py modified
+14:10:27  Python bytecode regenerated
+```
+
+This module is part of the OpenWebRX+ aircraft handling layer.
+
+The modification was performed as part of the ADS-B integration/troubleshooting work to control how aircraft information is handled by OpenWebRX+.
+
+---
+
+# 6. OpenWebRX+ Main Application
+
+The main OpenWebRX+ Python application was also modified:
+
+```text
+/usr/lib/python3/dist-packages/owrx/__main__.py
+```
+
+Timestamp:
+
+**6 September 2026 – 14:13:15**
+
+The corresponding Python bytecode was regenerated at:
+
+**14:13:30**
+
+```text
+/usr/lib/python3/dist-packages/owrx/__pycache__/__main__.cpython-311.pyc
+```
+
+The modification occurred during the ADS-B troubleshooting session and is therefore included in the ADS-B implementation report.
+
+This file is part of the main OpenWebRX+ application startup/runtime path and was included in the changes made while integrating and troubleshooting the aircraft processing system.
+
+---
+
+# 7. CSDR Aircraft Processing Chain
+
+The CSDR aircraft processing module was modified:
+
+```text
+/usr/lib/python3/dist-packages/csdr/chain/aircraft.py
+```
+
+Timestamp:
+
+**6 September 2026 – 14:22:38**
+
+The corresponding Python bytecode was regenerated at:
+
+**14:22:54**
+
+```text
+/usr/lib/python3/dist-packages/csdr/chain/__pycache__/aircraft.cpython-311.pyc
+```
+
+This confirms that the CSDR aircraft processing chain was modified and subsequently compiled/loaded by Python.
+
+The module forms part of the aircraft processing path between the incoming aircraft information and the OpenWebRX+ processing environment.
+
+---
+
+# 8. Complete ADS-B Processing Architecture
+
+The work resulted in the following logical architecture:
+
+```text
+                    ADS-B RECEIVER
+                          │
+                          ▼
+                    dump1090-fa
+                          │
+                          │ Beast / aircraft data
+                          ▼
+               aircraft-sync.sh
+                          │
+                          ▼
+             aircraft-sync.service
+                    (systemd)
+                          │
+                          ▼
+                 Aircraft JSON
+                          │
+                          ▼
+        ┌──────────────────────────────┐
+        │       OpenWebRX+             │
+        │                              │
+        │  owrx/__main__.py            │
+        │          │                   │
+        │          ▼                   │
+        │  owrx/aircraft/__init__.py   │
+        │          │                   │
+        │          ▼                   │
+        │  csdr/chain/aircraft.py      │
+        └──────────────────────────────┘
+                          │
+                          ▼
+                 Aircraft processing
+```
+
+---
+
+# 9. Confirmed File Modification Timeline
+
+The confirmed timestamps are:
+
+| Time     | File                                        | Action           |
+| -------- | ------------------------------------------- | ---------------- |
+| 13:51:51 | `/usr/local/bin/aircraft-sync.sh`           | Created/modified |
+| 13:52:18 | `/etc/systemd/system/aircraft-sync.service` | Created/modified |
+| 14:09:28 | `owrx/aircraft/__init__.py.bak-adsb`        | Backup created   |
+| 14:09:57 | `owrx/aircraft/__init__.py`                 | Modified         |
+| 14:13:15 | `owrx/__main__.py`                          | Modified         |
+| 14:22:38 | `csdr/chain/aircraft.py`                    | Modified         |
+
+Python subsequently regenerated the corresponding `.pyc` files for the modified Python modules.
+
+---
+
+# 10. Files Included in This Report
+
+The final ADS-B modification set covered exactly these five primary files:
+
+### 1. OpenWebRX+ aircraft module
+
+```text
+/usr/lib/python3/dist-packages/owrx/aircraft/__init__.py
+```
+
+### 2. OpenWebRX+ main application
+
+```text
+/usr/lib/python3/dist-packages/owrx/__main__.py
+```
+
+### 3. CSDR aircraft processing
+
+```text
+/usr/lib/python3/dist-packages/csdr/chain/aircraft.py
+```
+
+### 4. Aircraft synchronization script
+
+```text
+/usr/local/bin/aircraft-sync.sh
+```
+
+### 5. Systemd synchronization service
+
+```text
+/etc/systemd/system/aircraft-sync.service
+```
+
+A backup of the OpenWebRX+ aircraft module was also created:
+
+```text
+/usr/lib/python3/dist-packages/owrx/aircraft/__init__.py.bak-adsb
+```
+
+---
+
+# 11. Result
+
+The ADS-B system was extended with a dedicated synchronization mechanism and modifications to the OpenWebRX+/CSDR aircraft processing path.
+
+The implementation now consists of:
+
+* A known working ADS-B Beast source.
+* `dump1090-fa` as the aircraft data provider.
+* `aircraft-sync.sh` for aircraft data synchronization.
+* `aircraft-sync.service` for automatic execution.
+* Modified OpenWebRX+ aircraft processing.
+* Modified OpenWebRX+ main application code.
+* Modified CSDR aircraft processing.
+
+The changes were made progressively during the troubleshooting process, with backups created before important source modifications.
+
+---
+
+# 12. Conclusion
+
+The ADS-B work involved both the **data acquisition/synchronization layer** and the **OpenWebRX+/CSDR aircraft processing layer**.
+
+The five primary components documented in this report are:
+
+```text
+owrx/aircraft/__init__.py
+owrx/__main__.py
+csdr/chain/aircraft.py
+aircraft-sync.sh
+aircraft-sync.service
+```
+
+Together, these components form the core of the ADS-B integration and synchronization work performed on the OpenWebRX+ system.
+
+The filesystem timestamps provide a clear chronological record of the modifications made on **6 September 2026**.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Technical Report — ADS-B / OpenWebRX+ Integration and Debugging
 
 Date: 6 September 2026
